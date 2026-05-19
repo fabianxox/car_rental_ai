@@ -6,10 +6,12 @@ from app.ai.daily_summary_ai import generate_daily_summary
 
 from app.services.email_service import send_daily_summary
 
+from app.core.logger import logger
+
 
 def daily_summary_job():
 
-    print("RUNNING DAILY SUMMARY JOB")
+    logger.info("RUNNING DAILY SUMMARY JOB")
 
     conversations = get_todays_conversations()
 
@@ -17,7 +19,7 @@ def daily_summary_job():
 
     send_daily_summary(summary)
 
-    print("DAILY SUMMARY COMPLETED")
+    logger.info("DAILY SUMMARY COMPLETED")
 
 
 scheduler = BackgroundScheduler()
@@ -25,7 +27,7 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(
     daily_summary_job,
     trigger="cron",
-    #minute="*/1"
+    #minute="*/2"
     hour= 18,
     minute=0
 )

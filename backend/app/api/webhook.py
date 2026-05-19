@@ -10,6 +10,8 @@ from app.services.escalation_service import should_escalate
 from app.services.alert_service import send_owner_alert
 from app.services.email_service import send_urgent_email
 
+from app.core.logger import logger
+
 router = APIRouter()
 
 VERIFY_TOKEN = "car_rental_secret"
@@ -30,6 +32,8 @@ async def verify_webhook(request: Request):
 
 @router.post("/webhook")
 async def receive_message(request: Request):
+
+    logger.info("WEBHOOK RECEIVED")
 
     body = await request.json()
 
@@ -60,6 +64,8 @@ async def receive_message(request: Request):
 
                 text = message_data["text"]["body"]
 
+                logger.info(f"TEXT MESSAGE: {text}")
+
                 # SAVE INCOMING MESSAGE
                 incoming = Message(
                     sender=sender,
@@ -68,32 +74,41 @@ async def receive_message(request: Request):
                 )
 
                 db.add(incoming)
+
                 db.commit()
 
-                print("INCOMING MESSAGE SAVED")
-                intent_data = classify_intent(text)
-                print(intent_data)
-                
-                db = SessionLocal()
+                logger.info("INCOMING MESSAGE SAVED")
 
+                # CLASSIFY INTENT
+                intent_data = classify_intent(text)
+
+                logger.info(intent_data)
+
+                # SAVE CONVERSATION
                 conversation = Conversation(
-                  customer_phone=sender,
-                  intent=intent_data["intent"],
-                  priority=intent_data["priority"]
+                    customer_phone=sender,
+                    intent=intent_data["intent"],
+                    priority=intent_data["priority"]
                 )
 
                 db.add(conversation)
 
                 db.commit()
 
-                db.close()
+                logger.info("CONVERSATION SAVED")
 
+                # GENERATE AI REPLY
                 ai_reply = generate_ai_reply(text)
 
+                logger.info(f"AI REPLY: {ai_reply}")
+
+                # SEND WHATSAPP MESSAGE
                 await send_whatsapp_message(
                     to=sender,
                     message=ai_reply
                 )
+
+                logger.info("WHATSAPP REPLY SENT")
 
                 # SAVE OUTGOING MESSAGE
                 outgoing = Message(
@@ -103,29 +118,43 @@ async def receive_message(request: Request):
                 )
 
                 db.add(outgoing)
+
                 db.commit()
 
-                print("OUTGOING MESSAGE SAVED")
+                logger.info("OUTGOING MESSAGE SAVED")
 
+                # ESCALATION
                 is_urgent = should_escalate(
-                intent_data["priority"]
+                    intent_data["priority"]
                 )
 
                 if is_urgent:
 
-                  send_urgent_email(
-                  customer_phone=sender,
-                  intent=intent_data["intent"],
-                  priority=intent_data["priority"],
-                  customer_message=text
-                  )
+                    logger.warning("URGENT ISSUE DETECTED")
+
+                    send_urgent_email(
+                        customer_phone=sender,
+                        intent=intent_data["intent"],
+                        priority=intent_data["priority"],
+                        customer_message=text
+                    )
+
+                    logger.warning("URGENT EMAIL SENT")
 
     except Exception as e:
 
-        print("ERROR:", e)
+        logger.error(f"WEBHOOK ERROR: {e}")
 
     finally:
 
         db.close()
 
     return {"status": "received"}
+
+
+@router.post("/test")
+async def test_post():
+
+    logger.info("TEST POST WORKING")
+
+    return {"status": "ok"}
