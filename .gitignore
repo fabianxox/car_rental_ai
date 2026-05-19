@@ -1,1 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual Environment
+venv/
 backend/.env
+
+# Database
+*.db
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Alembic cache
+backend/alembic/versions/__pycache__/
+
+# Pytest
+.pytest_cache/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Build
+dist/
+build/
+
+# Node
+node_modules/
+
+# Environment files
+.env
+.env.*
